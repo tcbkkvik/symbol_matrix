@@ -2,15 +2,17 @@ package comp.torcb.misc;
 
 import java.io.PrintStream;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "UnusedReturnValue"})
 public class SymbolMatrix {
-    public static volatile boolean PRINT_ALL;
+    public static volatile PrintStream PRINT_ALL_STREAM;
+    private static volatile boolean PRINT_ALL_SKIP;
     private static final AtomicInteger SEQ = new AtomicInteger();
-//    public static SymbolMatrix EMPTY = new SymbolMatrix(0, 0);
     private final int seq;
     private final SExpression[][] matrix;
     private String desc = "";
@@ -47,30 +49,16 @@ public class SymbolMatrix {
         label("numeric");
     }
 
+    public SymbolMatrix(double... row) {
+        this(new double[][]{row});
+    }
+
     public int noRows() {
         return matrix.length;
     }
 
     public int noCols() {
         return matrix[0].length;
-    }
-
-    private SymbolMatrix label(String lb) {
-        if (label == null || label.isEmpty()) {
-            label = lb;
-        } else {
-            label += (lb.startsWith(" ") ? "" : " ") + lb;
-        }
-        if (PRINT_ALL) print();
-        return this;
-    }
-
-    public SymbolMatrix desc(String d) {
-        desc = d;
-        if (PRINT_ALL && desc != null && !desc.isEmpty()) {
-            System.out.println("  desc(" + seq + "): " + desc);
-        }
-        return this;
     }
 
     public SymbolMatrix mul(SymbolMatrix other) {
@@ -85,9 +73,7 @@ public class SymbolMatrix {
                 }
             }
         }
-        if (label != null) res.label("mul(" + seq + "," + other.seq + ")");
-        else label = "";
-        return res;
+        return res.label("mul(" + seq + "," + other.seq + ")");
     }
 
     public SymbolMatrix add(SymbolMatrix other) {
@@ -108,17 +94,14 @@ public class SymbolMatrix {
     }
 
     public SymbolMatrix square() {
-        String lb = label;
-        label = null;
-        SymbolMatrix mul = mul(this);
-        label = lb;
-        return mul.label("square(" + seq + ")");
+        PRINT_ALL_SKIP = true;
+        return mul(this).label("square(" + seq + ")");
     }
 
     public static SymbolMatrix identity(int N) {
-        SymbolMatrix diagonal = diagonal(N, new SExpression().add(new Symbol(1, "")));
-        diagonal.label = "";
-        return diagonal.label("identity(" + N + ")");
+        PRINT_ALL_SKIP = true;
+        return diagonal(N, new SExpression().add(new Symbol(1, "")))
+                .label("identity(" + N + ")");
     }
 
     public static SymbolMatrix diagonal(int N, SExpression value) {
@@ -129,8 +112,7 @@ public class SymbolMatrix {
                 res.matrix[i][j] = i == j ? value : zero;
             }
         }
-        res.label = "diagonal(" + N + ")";
-        return res;
+        return res.label("diagonal(" + N + ")");
     }
 
     public SymbolMatrix transpose() {
@@ -153,25 +135,17 @@ public class SymbolMatrix {
                 res.matrix[i][j] = matrix[row][col];
             }
         }
-        if (label != null)
-            res.label(seq + ".sub(" + Arrays.toString(rows) + Arrays.toString(cols) + ")");
-        return res;
+        return res.label(seq + ".sub(" + Arrays.toString(rows) + Arrays.toString(cols) + ")");
     }
 
     public SymbolMatrix subMatrix(int... ixs) {
-        var lb = label;
-        label = null;
-        SymbolMatrix sm = subMatrix(ixs, ixs);
-        label = lb;
-        return sm.label(seq + ".sub(" + Arrays.toString(ixs) + ")");
+        PRINT_ALL_SKIP = true;
+        return subMatrix(ixs, ixs)
+                .label(seq + ".sub(" + Arrays.toString(ixs) + ")");
     }
 
-    public SymbolMatrix outer() {
-        return transpose().mul(this);
-    }
-
-    public SymbolMatrix outer(String vector) {
-        return transpose().mul(new SymbolMatrix(vector));
+    public SymbolMatrix map(Function<SymbolMatrix, SymbolMatrix> mf) {
+        return mf.apply(this);
     }
 
     public SymbolMatrix assign(Map<Character, Double> map) {
@@ -183,17 +157,49 @@ public class SymbolMatrix {
             }
         }
         String assignedChars = map.keySet().stream().map(String::valueOf).collect(Collectors.joining());
-        res.label(seq + ".assign(" + assignedChars + ")");
-        return res;
+        return res.label(seq + ".assign(" + assignedChars + ")");
+    }
+
+    public SymbolMatrix assign(String mappedChars, double... values) {
+        return assign(toMap(mappedChars, values));
+    }
+
+    private static Map<Character, Double> toMap(String mappedChars, double... values) {
+        var chars = mappedChars.toCharArray();
+        if (chars.length != values.length)
+            throw new IllegalArgumentException("length differs");
+        Map<Character, Double> map = new HashMap<>();
+        for (int i = 0; i < chars.length; i++) {
+            map.put(chars[i], values[i]);
+        }
+        return map;
     }
 
     public static SymbolMatrix quaternionMatrix() {
         return new SymbolMatrix("c,-z,y",
                 "z,c,-x",
                 "-y,x,c")
-                .square().add(new SymbolMatrix("x,y,z").outer())
-                .label("quaternionMatrix")
+                .square()
+                .add(new SymbolMatrix("x,y,z")
+                        .map(m -> m.transpose().mul(m)))
                 .desc("Rotation matrix for quaternion vector [c,x,y,z]");
+    }
+
+    private SymbolMatrix label(String lb) {
+        label = lb;
+        if (!PRINT_ALL_SKIP && PRINT_ALL_STREAM != null) {
+            PRINT_ALL_STREAM.print(this);
+        }
+        PRINT_ALL_SKIP = false;
+        return this;
+    }
+
+    public SymbolMatrix desc(String d) {
+        desc = d;
+        if (PRINT_ALL_STREAM != null && desc != null && !desc.isEmpty()) {
+            PRINT_ALL_STREAM.println("  desc(" + seq + "): " + desc);
+        }
+        return this;
     }
 
     @Override
@@ -212,19 +218,9 @@ public class SymbolMatrix {
         }
         if (desc != null && !desc.isEmpty()) {
             //noinspection StringConcatenationInsideStringBufferAppend
-            sb.append("  desc(" + seq + "): " + desc).append("\n");
+            sb.append("  desc(" + seq + "): " + desc + "\n");
         }
         return sb.toString();
-    }
-
-    public SymbolMatrix print(PrintStream ps) {
-        ps.print(this);
-        return this;
-    }
-
-    @SuppressWarnings("UnusedReturnValue")
-    public SymbolMatrix print() {
-        return print(System.out);
     }
 
 }

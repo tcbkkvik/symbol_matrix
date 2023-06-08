@@ -1,7 +1,5 @@
 package comp.torcb.misc;
 
-import java.util.Map;
-
 
 public class SymbolMatrixFromQua {
 
@@ -17,13 +15,15 @@ public class SymbolMatrixFromQua {
                 {c, -z, y},
                 {z, c, -x},
                 {-y, x, c}
-        }).square().add(new SymbolMatrix(new double[][]{{x, y, z}}).outer());
+        }).square().add(new SymbolMatrix(x, y, z)
+                .map(m -> m.transpose().mul(m)));
     }
 
     public static void main(String[] args) {
-        SymbolMatrix.PRINT_ALL = true;
-        SymbolMatrix numRot = makeQRotMatrix(1, 1, 0, 0);
-        System.out.println(numRot);
+        SymbolMatrix.PRINT_ALL_STREAM = System.out;
+        makeQRotMatrix(1, 1, 0, 0)
+                .mul(new SymbolMatrix(.1, .2, .3).transpose());
+
         new SymbolMatrix("c,-x,-y,-z",
                 "-x,c,-z,y",
                 "-y,z,c,-x",
@@ -42,18 +42,17 @@ public class SymbolMatrixFromQua {
                 .subMatrix(1, 2, 3)
                 .desc("Rotation_new SymbolMatrix, modified Quaternion rules (ii=jj=kk=1)");
 
-
-        var qm = SymbolMatrix.quaternionMatrix();
+        SymbolMatrix.quaternionMatrix();
 
         var sm = new SymbolMatrix("c,-z,y",
                 "z,c,-x",
                 "-y,x,c")
-                .square().add(new SymbolMatrix("x,y,z").outer())
+                .square().add(new SymbolMatrix("x,y,z")
+                        .map(m -> m.transpose().mul(m)))
                 .desc("Rotation_new SymbolMatrix, based on Quaternion vector [c,x,y,z]");
 
-        var sm2 = sm.assign(Map.of('x', .5, 'y', .5, 'c', .1));
-        System.out.println(qm);
-        System.out.println(sm2);
+        sm.assign("xyc", .5,  .5, .1);
+
         System.out.println("done");
     }
 }
