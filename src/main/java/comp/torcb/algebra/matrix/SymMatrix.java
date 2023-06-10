@@ -173,7 +173,9 @@ public class SymMatrix {
     }
 
     public SymMatrix assign(String mappedChars, double... values) {
-        return assign(toMap(mappedChars, values));
+        PRINT_ALL_SKIP = true;
+        return assign(toMap(mappedChars, values))
+                .label(seq + ".assign(" + mappedChars + ", " + Arrays.toString(values) + ")");
     }
 
     private static Map<Character, Double> toMap(String mappedChars, double... values) {

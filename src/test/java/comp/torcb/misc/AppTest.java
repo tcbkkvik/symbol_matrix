@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Unit test for simple App.
@@ -20,12 +21,8 @@ import static org.junit.Assert.*;
 @SuppressWarnings({"UnaryPlus", "SpellCheckingInspection"})
 public class AppTest {
     /**
-     * Rigorous Test :-) todo
+     * Rigorous Test :-)
      */
-    @Test
-    public void shouldAnswerWithTrue() {
-        assertTrue(true);
-    }
 
     @Before
     public void before() {
@@ -53,6 +50,10 @@ public class AppTest {
         assertEquals(2, e.symbols().size());
         SymExpression e3 = SymExpression.parse("4a+2");
         assertEquals(e3, e);
+        var e4 = e3.sub(new Symbol(4, "a"))
+                .sub(SymExpression.parse("2"));
+        SymExpression e5 = new SymExpression();
+        assertEquals(e4, e5);
     }
 
     @Test
@@ -90,7 +91,7 @@ public class AppTest {
         var id = SymMatrix.identity(5);
         assertEquals(5, id.noCols());
 
-        Quaternion q = Quaternion.normalize(Math.PI / 12, 1, 0, 0);
+        Quaternion q = Quaternion.fromAngleVector(Math.PI / 12, 1, 0, 0);
         var mat = new SymMatrix(
                 calc1(q.c(), q.x(), q.y(), q.z())
         );
@@ -98,6 +99,20 @@ public class AppTest {
         assertEquals(1, ex.symbols().size());
         double cellNumericValue = ex.symbols().iterator().next().getNum();
         assertEquals(1, cellNumericValue, 1e-7);
+    }
+
+    @Test
+    public void quaternion() {
+        Quaternion q0 = Quaternion.fromAngleVector(Math.PI / 12, 1, 0, 0);
+        Quaternion q1 = q0.mul(q0);
+        Quaternion q2 = Quaternion.fromAngleVector(Math.PI / 6, 1, 0, 0);
+
+        SymMatrix vector0 = new SymMatrix(1, 2, 3);
+        SymMatrix vector1 = vector0.mul(q2.toRotationMatrix());
+        SymMatrix vector2 = vector1.mul(q2.conjugate().toRotationMatrix());
+
+        assertEquals(q1, q2);
+        assertEquals(vector0, vector2);
     }
 
     public static double[][] calc2(double a, double b, double c, double e) {

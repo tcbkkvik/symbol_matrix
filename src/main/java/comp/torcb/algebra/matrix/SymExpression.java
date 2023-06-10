@@ -9,19 +9,14 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class SymExpression {
+    private static final Pattern PAT = Pattern.compile("( ?[+-]?[0-9.a-zA-Z]+)");
     public final Map<String, Symbol> map = new TreeMap<>();
-
-//    static final Pattern PAT = Pattern.compile("([-+]?)([0-9]*[.]?[0-9]*)([a-zA-Z]*)");
 
     public static SymExpression parse(String s) {
         SymExpression se = new SymExpression();
-//        String regEx = "[+-]+";
-        Pattern pa = Pattern.compile("( ?[+-]?[0-9.a-zA-Z]+)");
-        Matcher matcher = pa.matcher(s);
+        Matcher matcher = PAT.matcher(s);
         while (matcher.find()) {
-            String val = matcher.group(1);
-            var sym = Symbol.parse(val);
-            se.add(sym);
+            se.add(Symbol.parse(matcher.group(1)));
         }
         return se;
     }
@@ -98,13 +93,22 @@ public class SymExpression {
         return s.isEmpty() ? "0" : s;
     }
 
+    public long nonZeroSymbols() {
+        return map.values().stream()
+                .filter(s -> Math.abs(s.num) > 1e-7)
+                .count();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         SymExpression other = (SymExpression) o;
-        if (other.map.size() != map.size()) return false;
+        if (other.nonZeroSymbols() != nonZeroSymbols()) {
+            return false;
+        }
         for (Symbol s1 : map.values()) {
+            if (Math.abs(s1.num) < 1e-7) continue;
             Symbol s2 = other.map.get(s1.body);
             if (!s1.equals(s2)) {
                 return false;

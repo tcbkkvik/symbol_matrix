@@ -1,7 +1,7 @@
 package comp.torcb.algebra.matrix;
 
 public record Quaternion(double c, double x, double y, double z) {
-    public static Quaternion normalize(double halfTurnRad, double u, double v, double w) {
+    public static Quaternion fromAngleVector(double halfTurnRad, double u, double v, double w) {
         double k = Math.sin(halfTurnRad) / Math.sqrt(u * u + v * v + w * w);
         return new Quaternion(Math.cos(halfTurnRad),
                 k * u,
@@ -26,12 +26,15 @@ public record Quaternion(double c, double x, double y, double z) {
                 .desc("Rotation matrix for quaternion [c,x,y,z]");
     }
 
+    public double[] doubles() {
+        return new double[]{c, x, y, z};
+    }
+
     public Quaternion conjugate() {
         return new Quaternion(c, -x, -y, -z);
     }
 
     public Quaternion mul(Quaternion o) {
-//        o = o.conjugate();
         double[] row = new SymMatrix(o.c, o.x, o.y, o.z)
                 .mul(new SymMatrix(new double[][]{
                         {c, x, y, z},
