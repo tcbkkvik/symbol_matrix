@@ -1,13 +1,12 @@
-package comp.torcb.misc;
+package comp.torcb.algebra.matrix;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
-@SuppressWarnings("unused")
 public class Symbol {
     static final Pattern PAT = Pattern.compile("([-+]?)([0-9]*[.]?[0-9]*)([a-zA-Z]*)");
     static final DecimalFormat DECIMALFORMAT;
@@ -68,6 +67,14 @@ public class Symbol {
         return no == null || no.isBlank() ? def : Double.parseDouble(no);
     }
 
+    public boolean isNumeric() {
+        return "".equals(body);
+    }
+
+    public double getNumeric() {
+        return isNumeric() ? num : Double.NaN;
+    }
+
     public double getNum() {
         return num;
     }
@@ -85,11 +92,17 @@ public class Symbol {
                 + body;
     }
 
-    public static void main(String[] args) {
-        Symbol[] parsed = Stream.of("2", "-2", "-a", "", "3b")
-                .map(Symbol::parse).toArray(Symbol[]::new);
-        var s = new Symbol(2, "ab");
-        var s2 = s.assign(Map.of('a', 3.2));
-        System.out.println(Arrays.toString(parsed));
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Symbol symbol = (Symbol) o;
+        boolean eqNum = Math.abs(symbol.num - num) < 1e-7;
+        return eqNum && body.equals(symbol.body);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(num);
     }
 }
