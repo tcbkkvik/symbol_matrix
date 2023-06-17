@@ -8,6 +8,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static comp.torcb.algebra.matrix.Symbol.ERR_DELTA;
+
 public class SymExpression {
     private static final Pattern PAT = Pattern.compile("( ?[+-]?[0-9.a-zA-Z]+)");
     public final Map<String, Symbol> map = new TreeMap<>();
@@ -22,10 +24,14 @@ public class SymExpression {
     }
 
     public SymExpression mul(SymExpression e) {
+        return mul(e, 1);
+    }
+
+    public SymExpression mul(SymExpression e, double factor) {
         var res = new SymExpression();
         for (Symbol a : map.values())
             for (Symbol b : e.map.values())
-                res.add(a.mul(b));
+                res.add(a.mul(b), factor);
         return res;
     }
 
@@ -42,6 +48,11 @@ public class SymExpression {
 
     public SymExpression sub(Symbol sym) {
         return add(sym, -1);
+    }
+
+    public SymExpression add(double factor) {
+        add(new Symbol(factor,""));
+        return this;
     }
 
     public SymExpression add(Symbol sym, double factor) {
@@ -95,7 +106,7 @@ public class SymExpression {
 
     public long nonZeroSymbols() {
         return map.values().stream()
-                .filter(s -> Math.abs(s.num) > 1e-7)
+                .filter(s -> Math.abs(s.num) > ERR_DELTA)
                 .count();
     }
 
@@ -108,7 +119,8 @@ public class SymExpression {
             return false;
         }
         for (Symbol s1 : map.values()) {
-            if (Math.abs(s1.num) < 1e-7) continue;
+            if (Math.abs(s1.num) < ERR_DELTA)
+                continue;
             Symbol s2 = other.map.get(s1.body);
             if (!s1.equals(s2)) {
                 return false;

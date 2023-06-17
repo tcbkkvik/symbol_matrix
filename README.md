@@ -1,9 +1,9 @@
 # symbol_matrix
-###  Simple symbolic &amp; numeric matrix multiplication++
+##  Simple symbolic &amp; numeric matrix multiplication++
 
 
 
-Usage example: 
+### Usage example: 
 ```
         // Quaternion = rotation axis
         var q1 = Quaternion.fromAngleVector(Math.PI / 12, 1, 0, 0);
@@ -36,7 +36,7 @@ Usage example:
                 "-y,z,c,-x",
                 "-z,-y,x,c")
                 .square()
-                .desc("row[0]=Quaternion_conjugate(c,x,y,z), row[1,2,3]=(i,j,k)*row[0] where ii=jj=kk=-1")
+                .desc("row[0]=Quaternion(c,x,y,z), row[1,2,3]=(i,j,k)*row[0] where ii=jj=kk=-1")
                 .slice(1, 2, 3)
                 .desc("Rotation_new SymbolMatrix, normal Quaternion rules (ii=jj=kk=-1)");
 
@@ -81,7 +81,7 @@ Matrix(24=square(23)):
           -2cx,  +cc+xx-yy-zz,      -2cz+2xy,      +2cy+2xz;
           -2cy,      +2cz+2xy,  +cc-xx+yy-zz,      -2cx+2yz;
           -2cz,      -2cy+2xz,      +2cx+2yz,  +cc-xx-yy+zz;
-  desc(24): row[0]=Quaternion_conjugate(c,x,y,z), row[1,2,3]=(i,j,k)*row[0] where ii=jj=kk=-1
+  desc(24): row[0]=Quaternion(c,x,y,z), row[1,2,3]=(i,j,k)*row[0] where ii=jj=kk=-1
 
 Matrix(25=24.sub([1, 2, 3])):
   +cc+xx-yy-zz,      -2cz+2xy,      +2cy+2xz;
@@ -89,4 +89,52 @@ Matrix(25=24.sub([1, 2, 3])):
       -2cy+2xz,      +2cx+2yz,  +cc-xx-yy+zz;
   desc(25): Rotation_new SymbolMatrix, normal Quaternion rules (ii=jj=kk=-1)
 
+```
+### Usage: Quaternion implementation
+```
+public record Quaternion(double c, double x, double y, double z) {
+    public static Quaternion fromAngleVector(double halfTurnRad, double u, double v, double w) {
+        double k = Math.sin(halfTurnRad) / Math.sqrt(u * u + v * v + w * w);
+        return new Quaternion(Math.cos(halfTurnRad),
+                k * u,
+                k * v,
+                k * w);
+    }
+
+    public SymMatrix toRotationMatrix() {
+        return new SymMatrix(new double[][]{
+                {c, -z, y},
+                {z, c, -x},
+                {-y, x, c}
+        }).square().add(new SymMatrix(x, y, z).map(m -> m.transpose().mul(m)));
+    }
+
+    public static SymMatrix symRotationMatrix() {
+        return new SymMatrix(
+                "c,-z,y",
+                "z,c,-x",
+                "-y,x,c"
+        ).square().add(new SymMatrix("x,y,z").map(m -> m.transpose().mul(m)))
+                .desc("Rotation matrix for quaternion [c,x,y,z]");
+    }
+
+    public double[] doubles() {
+        return new double[]{c, x, y, z};
+    }
+
+    public Quaternion conjugate() {
+        return new Quaternion(c, -x, -y, -z);
+    }
+
+    public Quaternion mul(Quaternion o) {
+        double[] row = new SymMatrix(o.c, o.x, o.y, o.z)
+                .mul(new SymMatrix(new double[][]{
+                        {c, x, y, z},
+                        {-x, c, -z, y},
+                        {-y, z, c, -x},
+                        {-z, -y, x, c}
+                })).toNumeric()[0];
+        return new Quaternion(row[0], row[1], row[2], row[3]);
+    }
+}
 ```

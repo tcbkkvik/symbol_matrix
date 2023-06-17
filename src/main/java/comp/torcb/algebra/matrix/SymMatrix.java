@@ -64,6 +64,10 @@ public class SymMatrix {
     }
 
     public SymMatrix mul(SymMatrix other) {
+        return mul(other, 1);
+    }
+
+    public SymMatrix mul(SymMatrix other, double factor) {
         int nr = noRows();
         int nc = other.noCols();
         var res = new SymMatrix(nr, nc);
@@ -71,7 +75,7 @@ public class SymMatrix {
             for (int j = 0; j < nc; j++) {
                 var expr = res.matrix[i][j] = new SymExpression();
                 for (int k = 0; k < noCols(); k++) {
-                    expr.add(matrix[i][k].mul(other.matrix[k][j]));
+                    expr.add(matrix[i][k].mul(other.matrix[k][j], factor));
                 }
             }
         }
@@ -137,6 +141,14 @@ public class SymMatrix {
             }
         }
         return res.label("transpose(" + seq + ")");
+    }
+
+    public SymMatrix subMatrix(int row1, int row2, int col1, int col2) {
+        int[] rows = new int[row2 - row1];
+        int[] cols = new int[col2 - col1];
+        for (int i = 0; i < rows.length; i++) rows[i] = i + row1;
+        for (int i = 0; i < cols.length; i++) cols[i] = i + col1;
+        return slice(rows, cols);
     }
 
     public SymMatrix slice(int[] rows, int[] cols) {
