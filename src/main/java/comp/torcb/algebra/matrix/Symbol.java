@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 
 public class Symbol {
     static final Pattern PAT = Pattern.compile("([-+]?)([0-9]*[.]?[0-9]*)([a-zA-Z]*)");
-    static final DecimalFormat DECIMALFORMAT;
+    public static final DecimalFormat DECIMALFORMAT;
     public static final double ERR_DELTA = 1e-9;
 
     static {
